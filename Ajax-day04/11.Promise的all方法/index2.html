@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN"> <!-- 改为中文编码 -->
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>城市天气查询</title>
+  <style>
+    /* 简单美化样式，提升可读性 */
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+
+    .my-ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .my-ul li {
+      padding: 10px;
+      margin: 5px 0;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+
+    .loading {
+      color: #666;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .error {
+      color: #dc3545;
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="loading">加载中...</div> <!-- 加载状态 -->
+    <ul class="my-ul" style="display: none;"></ul> <!-- 初始隐藏列表 -->
+    <div class="error" style="display: none;"></div> <!-- 错误提示（初始隐藏） -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    // 1. 提取城市配置数据（便于维护和扩展）
+    const cityList = [
+      { name: '北京', code: '110100' },
+      { name: '上海', code: '310100' },
+      { name: '广州', code: '440100' },
+      { name: '深圳', code: '440300' }
+      // 如需添加城市，直接在此处追加即可
+    ];
+
+    // 2. 封装天气请求函数（减少重复代码）
+    function getWeather(cityCode) {
+      return axios({
+        url: 'http://hmajax.itheima.net/api/weather',
+        params: { city: cityCode },
+        timeout: 5000 // 添加超时设置（5秒）
+      });
+    }
+
+    // 3. 生成所有请求的Promise数组
+    const weatherPromises = cityList.map(city => getWeather(city.code));
+
+    // 4. 并行执行所有请求
+    Promise.all(weatherPromises)
+      .then(results => {
+        // 隐藏加载状态，显示列表
+        document.querySelector('.loading').style.display = 'none';
+        document.querySelector('.my-ul').style.display = 'block';
+
+        // 生成列表项（使用li标签，语义化更好）
+        const htmlStr = results.map((res, index) => {
+          const cityName = cityList[index].name; // 对应城市名称
+          const weather = res.data.data.weather;
+          return `<li>${cityName} - ${weather}</li>`;
+        }).join('');
+
+        document.querySelector('.my-ul').innerHTML = htmlStr;
+      })
+      .catch(error => {
+        // 隐藏加载状态，显示错误信息
+        document.querySelector('.loading').style.display = 'none';
+        document.querySelector('.error').style.display = 'block';
+        // 显示具体错误信息（区分网络错误和接口错误）
+        const errorMsg = error.response
+          ? `请求失败：${error.response.data.message || '未知错误'}`
+          : `网络错误：${error.message}`;
+        document.querySelector('.error').textContent = errorMsg;
+      });
+  </script>
+</body>
+
+</html>
